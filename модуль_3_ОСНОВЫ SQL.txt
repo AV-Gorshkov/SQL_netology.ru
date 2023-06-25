@@ -1,0 +1,250 @@
+--=============== МОДУЛЬ 3. ОСНОВЫ SQL =======================================
+
+--======== ОСНОВНАЯ ЧАСТЬ ==============
+
+--ЗАДАНИЕ №1
+--Выведите для каждого покупателя его адрес проживания, 
+--город и страну проживания.
+
+SELECT 
+	concat_ws(' ', c.first_name, c.last_name) AS "name",
+	co.country,
+	ci.city,
+	a.address
+FROM 	
+	customer c
+LEFT JOIN address a ON a.address_id = c.address_id 
+LEFT JOIN city ci ON ci.city_id = a.city_id
+LEFT JOIN country co ON co.country_id = ci.country_id 
+
+
+--ЗАДАНИЕ №2
+--С помощью SQL-запроса посчитайте для каждого магазина количество его покупателей.
+
+SELECT 
+	s.store_id,
+	count(c.customer_id) AS "count_customers"
+FROM 
+	store s
+LEFT JOIN customer c ON c.store_id  = s.store_id 
+GROUP BY s.store_id
+
+
+--Доработайте запрос и выведите только те магазины, 
+--у которых количество покупателей больше 300-от.
+--Для решения используйте фильтрацию по сгруппированным строкам 
+--с использованием функции агрегации.
+
+SELECT 
+	s.store_id,
+	count(c.customer_id) AS "count_customer"
+FROM 
+	store s
+LEFT JOIN customer c ON c.store_id  = s.store_id 
+GROUP BY s.store_id
+HAVING count(c.customer_id) > '300'
+
+-- Доработайте запрос, добавив в него информацию о городе магазина, 
+--а также фамилию и имя продавца, который работает в этом магазине.
+
+SELECT 
+	st.store_id,
+	count(c.customer_id) AS "count_customer",
+	st.first_name,
+	st.last_name,
+	a.address ,
+	ci.city
+FROM 
+	store s
+LEFT JOIN customer c ON c.store_id  = s.store_id 
+LEFT JOIN staff st ON st.staff_id  = s.manager_staff_id
+LEFT JOIN address a ON a.address_id = s.address_id 
+LEFT JOIN city ci ON ci.city_id = a.city_id
+GROUP BY ci.city_id,st.staff_id, a.address_id 
+HAVING count(c.customer_id) > '300'
+
+
+--ЗАДАНИЕ №3
+--Выведите ТОП-5 покупателей, 
+--которые взяли в аренду за всё время наибольшее количество фильмов
+
+SELECT 
+	c.customer_id,
+	concat_ws(' ', c.first_name, c.last_name) AS "FIO",
+	count(t.rental_id) AS "count_films"
+FROM customer c
+INNER JOIN 
+	(
+	SELECT 
+		r.rental_id,
+		r.customer_id
+	FROM 
+		rental r
+	GROUP BY r.rental_id, r.customer_id
+	) t 
+ON t.customer_id = c.customer_id
+GROUP BY c.customer_id 
+ORDER by "count_films" DESC
+LIMIT 5
+
+
+--ЗАДАНИЕ №4
+--Посчитайте для каждого покупателя 4 аналитических показателя:
+--  1. количество фильмов, которые он взял в аренду
+--  2. общую стоимость платежей за аренду всех фильмов (значение округлите до целого числа)
+--  3. минимальное значение платежа за аренду фильма
+--  4. максимальное значение платежа за аренду фильма
+
+ 
+SELECT 
+	c.customer_id,
+	concat_ws(' ', c.last_name, c.first_name) AS "FIO",
+	count(t.rental_id) AS "count_films"	,
+	round(sum(p.amount),0) AS "total_amount",
+	min (p.amount) AS "min_amount",
+	max (p.amount) AS "max_amount"
+FROM 
+	customer c
+LEFT JOIN payment p  ON p.customer_id  = c.customer_id 
+INNER JOIN 
+	(
+	SELECT DISTINCT r.rental_id, r.customer_id
+	FROM rental r
+	GROUP BY r.rental_id, r.customer_id
+	) t 
+ON t.rental_ID = p.rental_id 
+GROUP BY c.customer_id 
+ORDER by  concat_ws(' ',  c.last_name, c.first_name)
+
+
+--ЗАДАНИЕ №5
+--Используя данные из таблицы городов, составьте все возможные пары городов так, чтобы 
+--в результате не было пар с одинаковыми названиями городов. Решение должно быть через Декартово произведение.
+ 
+SELECT 
+	c1.city AS "city_1",
+	c2.city AS "city_2"
+FROM 
+	city c1 
+CROSS JOIN city c2
+WHERE c1.city != c2.city
+ORDER BY c1.city , c2.city 
+
+
+--ЗАДАНИЕ №6
+--Используя данные из таблицы rental о дате выдачи фильма в аренду (поле rental_date) и 
+--дате возврата (поле return_date), вычислите для каждого покупателя среднее количество 
+--дней, за которые он возвращает фильмы. В результате должны быть дробные значения, а не интервал.
+ 
+SELECT 
+	customer_id,
+	round( avg( 
+			(return_date:: date) -(rental_date ::date)
+			 )
+		,2) AS "Ср.кол-во дней"
+FROM 	
+	rental 
+GROUP BY customer_id
+ORDER BY customer_id
+
+--======== ДОПОЛНИТЕЛЬНАЯ ЧАСТЬ ==============
+
+--ЗАДАНИЕ №1
+--Посчитайте для каждого фильма сколько раз его брали в аренду и значение общей стоимости аренды фильма за всё время.
+
+EXPLAIN ANALYZE 
+
+SELECT 
+	f.film_id,
+	f.title,
+	f.rating,
+	ca.name,
+	f.release_year,
+	l.name,
+	count(f.film_id) AS "кол-во аренд",
+	sum(t.amount) AS "аренда за фильм"
+FROM 	
+	film f 
+LEFT JOIN "language" l ON l.language_id  = f.language_id 
+LEFT JOIN film_category fc ON fc.film_id = f.film_id 
+LEFT JOIN category ca ON ca.category_id = fc.category_id 
+LEFT JOIN 
+	(
+	SELECT 
+		DISTINCT r.rental_id,
+				r.inventory_id,
+				i.film_id,
+				amount
+	FROM
+		rental r 
+	LEFT JOIN inventory i ON i.inventory_id = r.inventory_id 
+	LEFT JOIN payment p ON p.rental_id = r.rental_id 
+	) t
+ON t.film_id = f.film_id
+GROUP BY f.film_id, l.name, ca.name
+
+
+SELECT 
+	f.film_id,
+	f.title,
+	f.rating,
+	ca.name,
+	f.release_year,
+	l.name,
+	count(r.rental_id) AS "кол-во аренд",
+	sum(p.amount) AS "аренда за фильм"
+FROM 	
+	film f 
+LEFT JOIN inventory i ON f.film_id  = i.film_id 
+LEFT JOIN rental r ON r.inventory_id  = i.inventory_id
+LEFT JOIN payment p ON p.rental_id  = r.rental_id 
+LEFT JOIN "language" l ON l.language_id  = f.language_id 
+LEFT JOIN film_category fc ON fc.film_id = f.film_id 
+LEFT JOIN category ca ON ca.category_id = fc.category_id 
+GROUP BY f.film_id, l.name, ca.name
+ORDER BY f.film_id 
+
+
+--ЗАДАНИЕ №2
+--Доработайте запрос из предыдущего задания и выведите с помощью него фильмы, которые отсутствуют на dvd дисках.
+
+SELECT
+	f1.film_id,
+	f1.title,
+	f1.rating,
+	ca.name,
+	f1.release_year,
+	l.name	
+FROM
+film f1
+LEFT JOIN "language" l ON l.language_id  = f1.language_id 
+LEFT JOIN film_category fc ON fc.film_id = f1.film_id 
+LEFT  JOIN category ca ON ca.category_id = fc.category_id 
+INNER JOIN (
+	SELECT
+		f.film_id
+	FROM
+		film f
+	EXCEPT
+	SELECT
+		i.film_id
+	FROM inventory i ) t
+ON t.film_id = f1.film_id
+
+
+--ЗАДАНИЕ №3
+--Посчитайте количество продаж, выполненных каждым продавцом. Добавьте вычисляемую колонку "Премия".
+--Если количество продаж превышает 7300, то значение в колонке будет "Да", иначе должно быть значение "Нет".
+
+SELECT 	
+	s.first_name,
+	s.last_name,
+	count(p.rental_id),
+	CASE 
+		WHEN count(p.rental_id)>7300 THEN 'Да'
+		ELSE 'Нет'
+	END AS "Премия"
+FROM 
+	staff s
+LEFT JOIN payment p ON p.staff_id = s.staff_id 
+GROUP BY s.staff_id

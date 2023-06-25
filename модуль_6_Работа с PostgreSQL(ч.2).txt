@@ -1,0 +1,395 @@
+--=============== МОДУЛЬ 6. POSTGRESQL =======================================
+--= ПОМНИТЕ, ЧТО НЕОБХОДИМО УСТАНОВИТЬ ВЕРНОЕ СОЕДИНЕНИЕ И ВЫБРАТЬ СХЕМУ PUBLIC===========
+SET search_path TO public;
+
+--======== ОСНОВНАЯ ЧАСТЬ ==============
+
+--ЗАДАНИЕ №1
+--Напишите SQL-запрос, который выводит всю информацию о фильмах 
+--со специальным атрибутом "Behind the Scenes".
+
+EXPLAIN	ANALYZE -- 92.25 / 0.85
+
+SELECT
+	film_id,
+	title,
+	special_features
+FROM
+	film 
+WHERE special_features && array['Behind the Scenes']
+ORDER BY film_id
+
+
+--ЗАДАНИЕ №2
+--Напишите еще 2 варианта поиска фильмов с атрибутом "Behind the Scenes",
+--используя другие функции или операторы языка SQL для поиска значения в массиве.
+
+EXPLAIN	ANALYZE -- 92.25 / 0.91
+
+SELECT
+	film_id,
+	title,
+	special_features
+FROM
+	film 
+WHERE special_features @> array['Behind the Scenes']
+ORDER BY film_id
+
+
+EXPLAIN	ANALYZE -- 92.25 / 0.84
+
+SELECT
+	film_id,
+	title,
+	special_features
+FROM
+	film 
+WHERE array['Behind the Scenes'] <@ special_features 
+ORDER BY film_id
+
+EXPLAIN	ANALYZE -- 71.5 / 0.99
+
+SELECT	 
+	film_id,
+	title,
+	special_features
+FROM	
+	film 
+WHERE special_features::text LIKE '%Behind the Scenes%' 
+
+
+EXPLAIN	ANALYZE -- 249.1 / 2.18
+
+SELECT
+	film_id,
+	title,
+	description,
+	array_agg(unnest)
+FROM (
+	SELECT
+		film_id,
+		title,
+		description,
+		unnest(special_features) 
+	from 
+		film) t
+WHERE unnest = 'Behind the Scenes'
+GROUP BY film_id, title,description
+
+
+EXPLAIN	ANALYZE -- 145.93 / 2.2
+
+SELECT 
+	film_id,
+	title,
+	description,
+	special_features
+FROM
+	film 
+WHERE special_features = ANY 
+	(
+	SELECT
+		special_features
+	FROM
+		film 
+	WHERE special_features && array['Behind the Scenes']
+	)
+
+
+--ЗАДАНИЕ №3
+--Для каждого покупателя посчитайте сколько он брал в аренду фильмов 
+--со специальным атрибутом "Behind the Scenes.
+
+--Обязательное условие для выполнения задания: используйте запрос из задания 1, 
+--помещенный в CTE. CTE необходимо использовать для решения задания.
+	
+EXPLAIN	ANALYZE -- 9312 / 210
+
+WITH cte AS (
+SELECT
+	film_id,
+	title,
+	special_features
+FROM
+	film 
+WHERE special_features && array['Behind the Scenes']
+)
+SELECT 
+	c.customer_id,
+	concat_ws(' ', c.first_name, c.last_name), 
+	count(cte.film_id) AS "count_rental"
+FROM 
+	customer c 
+LEFT JOIN rental r ON r.customer_id = c.customer_id
+LEFT JOIN inventory i ON r.inventory_id = i.inventory_id
+LEFT JOIN cte on cte.film_id = i.film_id
+GROUP BY c.customer_id
+ORDER BY c.customer_id 
+
+
+
+--ЗАДАНИЕ №4
+--Для каждого покупателя посчитайте сколько он брал в аренду фильмов
+-- со специальным атрибутом "Behind the Scenes".
+
+--Обязательное условие для выполнения задания: используйте запрос из задания 1,
+--помещенный в подзапрос, который необходимо использовать для решения задания.
+
+EXPLAIN	ANALYZE -- 6200 / 120
+
+SELECT	
+	c.customer_id, 	
+	concat_ws(' ', c.first_name, c.last_name), 
+	count(t.film_id) AS "count_rental"
+FROM
+(
+	SELECT
+		film_id,
+		title,
+		special_features
+	FROM
+		film 
+	WHERE special_features && array['Behind the Scenes']
+) t
+LEFT JOIN inventory i on i.film_id = t.film_id
+LEFT JOIN rental r ON r.inventory_id = i.inventory_id
+LEFT JOIN customer c ON c.customer_id = r.customer_id
+GROUP BY c.customer_id
+ORDER BY c.customer_id 
+
+
+--ЗАДАНИЕ №5
+--Создайте материализованное представление с запросом из предыдущего задания
+--и напишите запрос для обновления материализованного представления
+
+CREATE  MATERIALIZED VIEW customer_film AS
+	SELECT	
+		c.customer_id, 	
+		concat_ws(' ', c.first_name, c.last_name), 
+		count(t.film_id) AS "count_rental"
+	FROM
+	(
+		SELECT
+			film_id,
+			title,
+			special_features
+		FROM
+			film 
+		WHERE special_features && array['Behind the Scenes']
+	) t
+	LEFT JOIN inventory i on i.film_id = t.film_id
+	LEFT JOIN rental r ON r.inventory_id = i.inventory_id
+	LEFT JOIN customer c ON c.customer_id = r.customer_id
+	GROUP BY c.customer_id
+	ORDER BY c.customer_id 
+WITH NO DATA
+
+REFRESH MATERIALIZED VIEW customer_film
+
+SELECT
+	*
+FROM 	
+	customer_film
+
+--ЗАДАНИЕ №6
+--С помощью explain analyze проведите анализ стоимости выполнения запросов из предыдущих заданий и ответьте на вопросы:
+--1. с каким оператором или функцией языка SQL, используемыми при выполнении домашнего задания: 
+--поиск значения в массиве затрачивает меньше ресурсов системы;
+--2. какой вариант вычислений затрачивает меньше ресурсов системы: 
+--с использованием CTE или с использованием подзапроса.
+
+	
+--1. Использование оператора проверки  && /  @> / <@ частичного вхождения значения 'Behind the Scenes' в массив данных
+--	имеет одинаковое значение стоимости запроса 92.25
+--		EXPLAIN	ANALYZE 92.25 / 0.85 ( WHERE special_features && array['Behind the Scenes'] )
+--		EXPLAIN	ANALYZE 92.25 / 0.91 ( WHERE special_features @> array['Behind the Scenes'] )
+--		EXPLAIN	ANALYZE 92.25 / 0.84 ( WHERE array['Behind the Scenes'] <@ special_features )
+--  Использование функции Like и преобразование данных массива в текст имеет значение стоимости запроса 71.5
+--		EXPLAIN	ANALYZE -- 71.5 / 0.99 (WHERE special_features::text LIKE '%Behind the Scenes%' )
+--	Использование функции Unnest и преобразование каждого элемента массива в отдельное значение имеет значение стоимости запроса 249.1
+--		EXPLAIN	ANALYZE -- 249.1 / 2.18 WHERE unnest = 'Behind the Scenes'
+	
+--2. EXPLAI ANALYZE  с использованием CTE  9312 / 210
+--	 EXPLAI ANALYZE  с использованием подзапроса  6200 / 133
+-- затрачивается меньше ресурсов с использованием подзапроса
+
+
+
+--======== ДОПОЛНИТЕЛЬНАЯ ЧАСТЬ ==============
+
+--ЗАДАНИЕ №1
+--Выполняйте это задание в форме ответа на сайте Нетологии
+
+--Сделайте explain analyze этого запроса.
+	EXPLAIN	ANALYZE -- 6029.1  / 1440
+--Основываясь на описании запроса, найдите узкие места и опишите их.
+/*  раскрытие функции "unnest" в строки
+	*/
+	
+EXPLAIN	ANALYZE -- 6029.1  / 1440
+select distinct cu.first_name  || ' ' || cu.last_name as name, 
+	count(ren.iid) over (partition by cu.customer_id)
+FROM
+	customer cu
+full outer join 
+	(
+	select 
+		*, 
+		r.inventory_id as iid, 
+		inv.sf_string as sfs,
+		r.customer_id as cid
+	from 
+		rental r 
+	full outer join 
+		(
+		select 
+			*, 
+			unnest(f.special_features) as sf_string
+		from 
+			inventory i
+		full outer join film f on f.film_id = i.film_id
+		) as inv 
+	on r.inventory_id = inv.inventory_id
+	) as ren 
+on ren.cid = cu.customer_id 
+where ren.sfs like '%Behind the Scenes%'
+order by count desc
+	
+
+-- альтернативный зарос
+EXPLAIN	ANALYZE -- 6200 / 120
+
+SELECT	
+	concat_ws(' ', c.first_name, c.last_name), 
+	count(t.film_id) AS "count_rental"
+FROM
+(
+	SELECT
+		film_id
+	FROM
+		film 
+	WHERE special_features && array['Behind the Scenes']
+) t
+LEFT JOIN inventory i on i.film_id = t.film_id
+LEFT JOIN rental r ON r.inventory_id = i.inventory_id
+LEFT JOIN customer c ON c.customer_id = r.customer_id
+GROUP BY c.customer_id
+ORDER BY "count_rental" desc 
+
+--ЗАДАНИЕ №2
+--Используя оконную функцию выведите для каждого сотрудника
+--сведения о самой первой продаже этого сотрудника.
+
+EXPLAIN	ANALYZE -- 5319.42 //255.923 rows=2
+
+SELECT
+	t.staff_id, 
+	concat_ws(' ', s.last_name, s.first_name) AS "fio_staff",
+	f.title,
+	t.amount,
+	t.payment_date  AS "first sale",
+	concat_ws(' ', c.last_name, c.first_name) AS "fio_customer"
+FROM
+	(
+	SELECT
+		p.customer_id,
+		rental_id,
+		p.amount,
+		staff_id,
+		payment_id,
+		payment_date ,
+		ROW_NUMBER() OVER (PARTITION BY staff_id ORDER BY payment_date )
+	FROM
+		payment p) t
+LEFT JOIN staff s ON t.staff_id = s.staff_id
+LEFT JOIN customer c ON t.customer_id = c.customer_id
+LEFT JOIN rental r ON r.rental_id = t.rental_id AND t.customer_id = r.customer_id
+JOIN inventory i ON i.inventory_id = r.inventory_id
+JOIN film f ON i.film_id = f.film_id
+WHERE row_number = 1
+GROUP BY  t.staff_id, c.customer_id, f.film_id, s.staff_id, t.amount, t.payment_date  
+ORDER BY staff_id
+
+
+
+--ЗАДАНИЕ №3
+--Для каждого магазина определите и выведите одним SQL-запросом следующие аналитические показатели:
+-- 1. день, в который арендовали больше всего фильмов (день в формате год-месяц-день)
+-- 2. количество фильмов взятых в аренду в этот день
+-- 3. день, в который продали фильмов на наименьшую сумму (день в формате год-месяц-день)
+-- 4. сумму продажи в этот день
+
+EXPLAIN	ANALYZE --9490 /185
+
+SELECT 	
+	temp_1.store_id ,
+	temp_1."day most film rented",
+	temp_1."count_rental",
+	temp_2."day sold  films small amount",	
+	temp_2."total_amount"
+FROM 
+(
+	SELECT 	
+		c.store_id ,
+		t1."day most film rented",
+		t1."count_rental"
+	FROM 	
+		customer c
+	JOIN 
+		(
+		SELECT
+			*
+		FROM 
+			(
+			SELECT 
+				c.store_id,
+				date_trunc('day', r.rental_date)::date AS "day most film rented",
+				count (r.rental_id) AS "count_rental",
+				ROW_NUMBER () OVER (PARTITION BY  c.store_id ORDER BY count (r.rental_id) DESC )
+			FROM 	
+				rental r
+			JOIN customer c ON c.customer_id = r.customer_id
+			GROUP BY  c.store_id, "day most film rented"
+			) t
+		WHERE ROW_NUMBER = 1
+		)t1
+	ON t1.store_id = c.store_id	
+	GROUP  BY c.store_id, 	t1."day most film rented",	t1."count_rental"
+) temp_1
+JOIN
+(
+	SELECT 	
+		c.store_id ,
+		t2."day sold  films small amount",	
+		t2."total_amount"
+	FROM 	
+		customer c
+	JOIN 
+		(
+		SELECT
+			*
+		FROM 
+			(
+			SELECT 
+				c.store_id,
+				date_trunc('day', p.payment_date)::date AS "day sold  films small amount",
+				sum (p.amount) AS "total_amount",
+				ROW_NUMBER () OVER (PARTITION BY  c.store_id ORDER BY sum(p.amount)  )
+			FROM 	
+				payment p
+			JOIN customer c ON c.customer_id = p.customer_id
+			GROUP BY  c.store_id, "day sold  films small amount"
+			) t
+		WHERE ROW_NUMBER = 1
+		)t2
+	ON t2.store_id = c.store_id	
+	GROUP  BY c.store_id, 	t2."day sold  films small amount",	t2."total_amount"
+) temp_2
+ON temp_2.store_id = temp_1.store_id
+
+
+
+
+
+
+
