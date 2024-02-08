@@ -1,4 +1,56 @@
-## Проектная работа по модулю “SQL и получение данных” 
+1. [Работа с базами данных](https://github.com/AV-Gorshkov/SQL_netology.ru/blob/main/1_%D0%A0%D0%B0%D0%B1%D0%BE%D1%82%D0%B0_%D1%81_%D0%B1%D0%B0%D0%B7%D0%B0%D0%BC%D0%B8_%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85.sql)
+
+Изучение:
+
+- Запросы
+- Основные типы данных
+- Работа с разными типами данных
+- Сортировка Order By
+- Фильтрация Where
+
+
+2. [Основы SQL](https://github.com/AV-Gorshkov/SQL_netology.ru/blob/main/2_%D0%9E%D1%81%D0%BD%D0%BE%D0%B2%D1%8B_SQL.txt)
+
+Изучение:
+
+- Объединение таблиц Inner Join / Left Join / Right Join / Full Outer Join / Union / Except
+- Агрегация данных Sum / Count / Avg / String_Agg
+- Группировка данных Group By / Having
+- Вложенные запросы
+- Условные конструкции Case
+
+
+3. [Углубление в SQL](https://github.com/AV-Gorshkov/SQL_netology.ru/blob/main/3_%D0%A3%D0%B3%D0%BB%D1%83%D0%B1%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5_%D0%B2_SQL.txt)
+
+Изучение:
+
+- Созадние таблиц Creat Table / Alter Table / Drop Table
+- Данные Insert Into / Update Table / Delete From Table
+- Внешние ключи
+- Проверяющие ограничения
+
+
+4. [Работа с PostgreSQL](https://github.com/AV-Gorshkov/SQL_netology.ru/blob/main/4_%D0%A0%D0%B0%D0%B1%D0%BE%D1%82%D0%B0_%D1%81_PostgreSQL.txt)
+
+Изучение:
+
+- Оконные функции
+- CTE
+- Рекурсивные CTE
+
+
+5. [Работа с PostgreSQL часть 2](https://github.com/AV-Gorshkov/SQL_netology.ru/blob/main/5_%D0%A0%D0%B0%D0%B1%D0%BE%D1%82%D0%B0_%D1%81_PostgreSQL(%D1%87%D0%B0%D1%81%D1%82%D1%8C_2).txt)
+
+Изучение:
+
+- Представления Create View / Creat Materialized View
+- Схемы запросов Explain Analyze
+- Индексы
+- Сложные типы данных Json
+- Массивы
+
+
+6. [Проектная работа по модулю “SQL и получение данных” ](https://github.com/AV-Gorshkov/SQL_netology.ru/blob/main/%D0%98%D1%82%D0%BE%D0%B3%D0%BE%D0%B2%D1%8B%D0%B9_%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D1%8C.txt)
 
 
 **Для выполнения работы Вам необходимо:**					
@@ -38,8 +90,3 @@
 d = arccos {sin(latitude_a)·sin(latitude_b) + cos(latitude_a)·cos(latitude_b)·cos(longitude_a - longitude_b)}, где latitude_a и latitude_b — широты, longitude_a, longitude_b — долготы данных пунктов, d — расстояние между пунктами измеряется в радианах длиной дуги большого круга земного шара.
 Расстояние между пунктами, измеряемое в километрах, определяется по формуле:
 L = d·R, где R = 6371 км — средний радиус земного шара.
-
-**Решение**:
-
-[Итоговый_модуль](https://github.com/AV-Gorshkov/SQL_netology.ru/blob/main/%D0%98%D1%82%D0%BE%D0%B3%D0%BE%D0%B2%D1%8B%D0%B9_%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D1%8C.txt)
-
