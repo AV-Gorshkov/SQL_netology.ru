@@ -1,3 +1,5 @@
+## Учебный кейс PostgreSQL от Netolology
+
 1. [Работа с базами данных](https://github.com/AV-Gorshkov/SQL_netology.ru/blob/main/1_%D0%A0%D0%B0%D0%B1%D0%BE%D1%82%D0%B0_%D1%81_%D0%B1%D0%B0%D0%B7%D0%B0%D0%BC%D0%B8_%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85.sql)
 
 Изучение:
